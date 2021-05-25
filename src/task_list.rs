@@ -1,6 +1,6 @@
 use super::task;
 use std::fs::File;
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, BufWriter, Write};
 use std::path::Path;
 
 pub struct TaskList {
@@ -26,8 +26,14 @@ impl TaskList {
         }
     }
 
+    pub fn add_task(&mut self, id: Option<&str>, desc: &str) {
+        self.tasks.push(task::create(id, desc));
+        self.compute_prefixes();
+    }
+
     fn compute_prefixes(&mut self) {
         // Create shortest ids for each task
+        // Note: this is a crude, slow implementation (but it works)
         self.prefix_max_len = 1;
         self.prefixes = Vec::new();
         for (pos, task) in self.tasks.iter().enumerate() {
@@ -35,18 +41,23 @@ impl TaskList {
             let mut unique = false;
             let mut prefix = "";
 
-            while !unique && len <= task.id().len() {
-                prefix = &task.id()[..len];
-                unique = true;
-                for (pos2, task2) in self.tasks.iter().enumerate() {
-                    if pos == pos2 {
-                        continue;
-                    }
+            if task.show_full_id() {
+                prefix = task.id();
+                len = prefix.len();
+            } else {
+                while !unique && len <= task.id().len() {
+                    prefix = &task.id()[..len];
+                    unique = true;
+                    for (pos2, task2) in self.tasks.iter().enumerate() {
+                        if pos == pos2 {
+                            continue;
+                        }
 
-                    if task2.id().starts_with(prefix) {
-                        unique = false;
-                        len += 1;
-                        break;
+                        if task2.id().starts_with(prefix) {
+                            unique = false;
+                            len += 1;
+                            break;
+                        }
                     }
                 }
             }
@@ -54,6 +65,17 @@ impl TaskList {
                 self.prefix_max_len = len
             }
             self.prefixes.push(prefix.to_string());
+        }
+    }
+
+    pub fn save(&self) {
+        println!("saving to: {}", self.file);
+        let file = File::create(&self.file).expect("cannot open file for write");
+        let mut file = BufWriter::new(file);
+
+        for task in &self.tasks {
+            file.write(task.to_string().as_bytes()).expect("cannot write data");
+            file.write("\n".to_string().as_bytes()).expect("cannot write data");
         }
     }
 }

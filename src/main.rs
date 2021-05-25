@@ -41,31 +41,31 @@ fn show_tasks() {
 
 fn add_task(matches: &ArgMatches)
 {
-    println!("TODO: add task");
-
-    let id = matches.value_of("id");
-    match id {
+    let mut tasks = task_list::create_from_file("todo.txt");
+    let mut desc = String::from("");
+    match matches.values_of("task") {
         None => {},
-        Some(s) => {
-            println!("Your task id is {}.", s)
+        Some(words) => {
+            for word in words {
+                if desc.len() > 0 {
+                    desc += " ";
+                }
+                desc += word;
+            }
         }
     }
 
-    let id = matches.values_of("task");
-    match id {
-        None => {},
-        Some(s) => {
-            println!("Your task description is {:?}.", s)
-        }
-    }
+    tasks.add_task(matches.value_of("id"), &desc);
+    tasks.show();
+    tasks.save();
 }
 
 fn test(_matches: &ArgMatches) {
     let mut tasks = Vec::new();
 
-    tasks.push(task::create("one"));
-    tasks.push(task::create("two"));
-    tasks.push(task::create("three"));
+    tasks.push(task::create(None, "one"));
+    tasks.push(task::create(None, "two"));
+    tasks.push(task::create(None, "three"));
 
     let json = r#"
         {
