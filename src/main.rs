@@ -1,11 +1,9 @@
 mod task;
+mod task_list;
 
 #[macro_use]
 extern crate clap;
 use clap::{Arg, App, SubCommand, ArgMatches};
-use std::fs::File;
-use std::io::{self, BufRead};
-use std::path::Path;
 
 fn main() {
     let matches = App::new("t")
@@ -36,62 +34,9 @@ fn main() {
     }
 }
 
-// The output is wrapped in a Result to allow matching on errors
-// Returns an Iterator to the Reader of the lines of the file.
-fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where P: AsRef<Path>, {
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
-}
-
 fn show_tasks() {
-    println!("TODO: show tasks");
-
-    let mut tasks = Vec::new();
-
-    // File hosts must exist in current path before this produces output
-    if let Ok(lines) = read_lines("todo.txt") {
-        // Consumes the iterator, returns an (Optional) String
-        for line in lines {
-            if let Ok(task_string) = line {
-                let task = task::create_from_string(&task_string);
-                tasks.push(task);
-            }
-        }
-    }
-
-    // Create shortest ids for each task
-    let mut max_len = 1;
-    let mut prefixes = Vec::new();
-    for (pos, task) in tasks.iter().enumerate() {
-        let mut len = 1;
-        let mut unique = false;
-        let mut prefix = "";
-
-        while !unique && len <= task.id().len() {
-            prefix = &task.id()[..len];
-            unique = true;
-            for (pos2, task2) in tasks.iter().enumerate() {
-                if pos == pos2 {
-                    continue;
-                }
-
-                if task2.id().starts_with(prefix) {
-                    unique = false;
-                    len += 1;
-                    break;
-                }
-            }
-        }
-        if len > max_len {
-            max_len = len
-        }
-        prefixes.push(prefix);
-    }
-
-    for (pos, task) in tasks.iter().enumerate() {
-        println!("{:width$} - {}", prefixes[pos], task.desc(), width = max_len);
-    }
+    let tasks = task_list::create_from_file("todo.txt");
+    tasks.show();
 }
 
 fn add_task(matches: &ArgMatches)
