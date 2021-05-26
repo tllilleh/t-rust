@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sha1::{Sha1, Digest};
+use std::time::SystemTime;
 
 fn is_false(operand: &bool) -> bool {
     !operand
@@ -14,6 +15,8 @@ pub struct Task {
     parent_id : Option<String>,
     #[serde(default, skip_serializing_if = "is_false")]
     show_full_id : bool,
+    #[serde(default)]
+    timestamp : f64,
 }
 
 impl Task {
@@ -69,6 +72,18 @@ pub fn create_from_string(string: &str) -> Task {
 pub fn create(id_in: Option<&str>, desc: &str) -> Task {
     let id: String;
     let show_full_id: bool;
+    let timestamp: f64;
+
+    match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+        Err(_) => {
+            timestamp = 0.0;
+        }
+        Ok(ts) => {
+            timestamp = ts.as_secs_f64();
+        }
+    }
+
+    println!("Creating a task at time: {}", timestamp);
 
     match id_in {
         None => {
@@ -89,5 +104,6 @@ pub fn create(id_in: Option<&str>, desc: &str) -> Task {
         desc : desc.to_string(),
         parent_id: None,
         show_full_id,
+        timestamp,
     }
 }
