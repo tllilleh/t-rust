@@ -6,7 +6,7 @@ fn is_false(operand: &bool) -> bool {
     !operand
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Task {
     id : String,
     #[serde(default, skip_serializing)]
@@ -35,6 +35,10 @@ impl Task {
 
     pub fn show_full_id(&self) -> bool {
         self.show_full_id
+    }
+
+    pub fn timestamp(&self) -> f64 {
+        self.timestamp
     }
 }
 
@@ -82,8 +86,6 @@ pub fn create(id_in: Option<&str>, desc: &str) -> Task {
             timestamp = ts.as_secs_f64();
         }
     }
-
-    println!("Creating a task at time: {}", timestamp);
 
     match id_in {
         None => {

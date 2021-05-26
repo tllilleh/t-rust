@@ -2,11 +2,12 @@ use super::task;
 use std::fs::File;
 use std::io::{self, BufRead, BufWriter, Write};
 use std::path::Path;
+use std::collections::HashMap;
 
 pub struct TaskList {
     file : String,
     tasks : Vec<task::Task>,
-    prefixes : Vec<String>,
+    prefixes : HashMap<String, String>,
     prefix_max_len : usize
 }
 
@@ -21,8 +22,15 @@ where P: AsRef<Path>, {
 impl TaskList {
     pub fn show(&self) {
         println!("Tasks:");
-        for (pos, task) in self.tasks.iter().enumerate() {
-            println!("{:width$} - {}", self.prefixes[pos], task.desc(), width = self.prefix_max_len);
+        let mut sorted_tasks = self.tasks.to_vec();
+        sorted_tasks.sort_by(|a, b| a.timestamp().partial_cmp(&b.timestamp()).unwrap());
+        for task in sorted_tasks {
+            match self.prefixes.get(task.id()) {
+                Some(prefix) => {
+                    println!("{:width$} - {}", prefix, task.desc(), width = self.prefix_max_len);
+                }
+                None => {}
+            }
         }
     }
 
@@ -35,7 +43,7 @@ impl TaskList {
         // Create shortest ids for each task
         // Note: this is a crude, slow implementation (but it works)
         self.prefix_max_len = 1;
-        self.prefixes = Vec::new();
+        self.prefixes = HashMap::new();
         for (pos, task) in self.tasks.iter().enumerate() {
             let mut len = 1;
             let mut unique = false;
@@ -64,12 +72,11 @@ impl TaskList {
             if len > self.prefix_max_len {
                 self.prefix_max_len = len
             }
-            self.prefixes.push(prefix.to_string());
+            self.prefixes.insert(task.id().to_string(), prefix.to_string());
         }
     }
 
     pub fn save(&self) {
-        println!("saving to: {}", self.file);
         let file = File::create(&self.file).expect("cannot open file for write");
         let mut file = BufWriter::new(file);
 
@@ -97,7 +104,7 @@ pub fn create_from_file(file: &str) -> TaskList {
     let mut task_list = TaskList {
         file: file.to_string(),
         tasks,
-        prefixes : Vec::new(),
+        prefixes : HashMap::new(),
         prefix_max_len : 64
     };
 
