@@ -23,11 +23,20 @@ fn main() {
                 .help("Task description")
                 .multiple(true)
                 .required(true)))
+        .subcommand(SubCommand::with_name("remove")
+            .alias("r")
+            .about("Remove a task")
+            .arg(Arg::with_name("id")
+                .value_name("ID")
+                .takes_value(true)
+                .required(true)
+                .help("Task ID to remove")))
         .subcommand(SubCommand::with_name("test"))
         .get_matches();
 
     match matches.subcommand() {
         ("add", Some(add_matches)) => add_task(&add_matches),
+        ("remove", Some(remove_matches)) => remove_task(&remove_matches),
         ("test", Some(test_matches)) => test(&test_matches),
         ("", None) => show_tasks(),
         _ => unreachable!(),
@@ -41,7 +50,10 @@ fn show_tasks() {
 
 fn add_task(matches: &ArgMatches)
 {
+    // Load Task List
     let mut tasks = task_list::create_from_file("todo.txt");
+
+    // Concatenate all words into a single description string
     let mut desc = String::from("");
     match matches.values_of("task") {
         None => {},
@@ -55,8 +67,35 @@ fn add_task(matches: &ArgMatches)
         }
     }
 
-    tasks.add_task(matches.value_of("id"), &desc);
-    tasks.show();
+    // Add Task
+    match tasks.add_task(matches.value_of("id"), &desc)
+    {
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            //TODO: exit?
+        }
+        Ok(_) => {}
+    }
+
+    // Save Task List
+    tasks.save();
+}
+
+fn remove_task(matches: &ArgMatches)
+{
+    // Load Task List
+    let mut tasks = task_list::create_from_file("todo.txt");
+
+    // Remove Task
+    match tasks.remove_task(matches.value_of("id")) {
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            //TODO: exit?
+        }
+        Ok(_) => { }
+    }
+
+    // Save Task List
     tasks.save();
 }
 

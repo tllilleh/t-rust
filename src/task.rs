@@ -73,8 +73,7 @@ pub fn create_from_string(string: &str) -> Task {
     return create(None, "");
 }
 
-pub fn create(id_in: Option<&str>, desc: &str) -> Task {
-    let id: String;
+pub fn create(id: Option<&str>, desc: &str) -> Task {
     let show_full_id: bool;
     let timestamp: f64;
 
@@ -87,19 +86,19 @@ pub fn create(id_in: Option<&str>, desc: &str) -> Task {
         }
     }
 
-    match id_in {
+    let id = match id {
         None => {
             // create a Sha1 object
             let mut hasher = Sha1::new();
             hasher.update(desc.to_string());
-            id = format!("{:x}", hasher.finalize());
             show_full_id = false;
+            format!("{:x}", hasher.finalize())
         },
         Some(user_provided_id) => {
-            id = user_provided_id.to_string();
             show_full_id = true;
+            user_provided_id.to_string()
         }
-    }
+    };
 
     Task {
         id,

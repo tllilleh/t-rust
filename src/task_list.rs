@@ -3,6 +3,20 @@ use std::fs::File;
 use std::io::{self, BufRead, BufWriter, Write};
 use std::path::Path;
 use std::collections::HashMap;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum TaskListError {
+    #[error("Prefix matches more than one task")]
+    AmbiguousPrefix,
+
+    #[error("Prefix matches no tasks")]
+    BadPrefix,
+
+    // Represents all other cases of `std::io::Error`.
+    #[error(transparent)]
+    IOError(#[from] std::io::Error),
+}
 
 pub struct TaskList {
     file : String,
@@ -34,9 +48,26 @@ impl TaskList {
         }
     }
 
-    pub fn add_task(&mut self, id: Option<&str>, desc: &str) {
-        self.tasks.push(task::create(id, desc));
+    pub fn add_task(&mut self, id: Option<&str>, desc: &str) -> Result<(), TaskListError> {
+        let task = task::create(id, desc);
+        let task_id = task.id().to_string();
+
+        self.tasks.push(task);
         self.compute_prefixes();
+
+        let task_prefix: String;
+        match self.prefixes.get(&task_id) {
+            Some(prefix) => {
+                task_prefix = prefix.to_string();
+            }
+            None => {
+                task_prefix = task_id.to_string();
+            }
+        }
+
+        println!("added task {} ({})", task_prefix, task_id);
+
+        Ok(())
     }
 
     fn compute_prefixes(&mut self) {
@@ -83,6 +114,45 @@ impl TaskList {
         for task in &self.tasks {
             file.write(task.to_string().as_bytes()).expect("cannot write data");
             file.write("\n".to_string().as_bytes()).expect("cannot write data");
+        }
+    }
+
+    pub fn remove_task(&mut self, prefix: Option<&str>) -> Result<(), TaskListError> {
+        let prefix = match prefix {
+            None => {return Err(TaskListError::BadPrefix)}
+            Some(prefix) => prefix
+        };
+
+        let full_id = self.get_full_id(prefix)?;
+
+        self.tasks.retain(|task| *task.id() != full_id);
+        self.compute_prefixes();
+
+        println!("removed task {} ({})", prefix, full_id);
+
+        Ok(())
+    }
+
+    fn get_full_id(&self, prefix: &str) -> Result<String, TaskListError> {
+        let mut full_id = None;
+        for task in &self.tasks {
+            if task.id().starts_with(prefix) {
+                if full_id.is_some() {
+                    // more than one task matches this prefix
+                    return Err(TaskListError::AmbiguousPrefix);
+                }
+
+                full_id = Some(task.id().to_string());
+            }
+        }
+
+        match full_id {
+            Some(full_id) => {
+                return Ok(full_id);
+            }
+            None => {
+                return Err(TaskListError::BadPrefix);
+            }
         }
     }
 }
