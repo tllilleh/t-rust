@@ -13,6 +13,9 @@ pub enum TaskListError {
     #[error("Prefix matches no tasks")]
     BadPrefix,
 
+    #[error("A task with this id already exits")]
+    DuplicateTask,
+
     // Represents all other cases of `std::io::Error`.
     #[error(transparent)]
     IOError(#[from] std::io::Error),
@@ -49,6 +52,21 @@ impl TaskList {
     }
 
     pub fn add_task(&mut self, id: Option<&str>, desc: &str) -> Result<(), TaskListError> {
+        // Check if task with this id already exists
+        match id {
+            Some(id) => {
+                match self.get_task(id) {
+                    Ok(task) => {
+                        if id == task.id() {
+                            return Err(TaskListError::DuplicateTask);
+                        }
+                    }
+                    Err(_) => {}
+                }
+            }
+            None => {}
+        }
+
         let task = task::create(id, desc);
         let task_id = task.id().to_string();
 
@@ -131,7 +149,10 @@ impl TaskList {
     fn get_full_id(&self, prefix: &str) -> Result<String, TaskListError> {
         let mut full_id = None;
         for task in &self.tasks {
-            if task.id().starts_with(prefix) {
+            if task.id() == prefix {
+                full_id = Some(task.id().to_string());
+                break;
+            } else if task.id().starts_with(prefix) {
                 if full_id.is_some() {
                     // more than one task matches this prefix
                     return Err(TaskListError::AmbiguousPrefix);
