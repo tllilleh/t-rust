@@ -31,11 +31,25 @@ fn main() {
                 .takes_value(true)
                 .required(true)
                 .help("Task ID to remove")))
+        .subcommand(SubCommand::with_name("edit")
+            .alias("e")
+            .about("Edit a task")
+            .arg(Arg::with_name("id")
+                .value_name("ID")
+                .takes_value(true)
+                .required(true)
+                .help("Task ID to edit"))
+            .arg(Arg::with_name("task")
+                .value_name("DESC")
+                .help("Task description")
+                .multiple(true)
+                .required(true)))
         .subcommand(SubCommand::with_name("test"))
         .get_matches();
 
     match matches.subcommand() {
         ("add", Some(add_matches)) => add_task(&add_matches),
+        ("edit", Some(edit_matches)) => edit_task(&edit_matches),
         ("remove", Some(remove_matches)) => remove_task(&remove_matches),
         ("test", Some(test_matches)) => test(&test_matches),
         ("", None) => show_tasks(),
@@ -50,8 +64,43 @@ fn show_tasks() {
 
 fn add_task(matches: &ArgMatches)
 {
+    // Handle Command Line Options
+    // Concatenate all words into a single description string
+    let mut desc = String::from("");
+    match matches.values_of("task") {
+        None => {},
+        Some(words) => {
+            for word in words {
+                if desc.len() > 0 {
+                    desc += " ";
+                }
+                desc += word;
+            }
+        }
+    }
+
     // Load Task List
     let mut tasks = task_list::create_from_file("todo.txt");
+
+    // Add Task
+    match tasks.add_task(matches.value_of("id"), &desc)
+    {
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return;
+        }
+        Ok(_) => {}
+    }
+
+    // Save Task List
+    tasks.save();
+}
+
+fn edit_task(matches: &ArgMatches)
+{
+    // Handle command line options
+    // Get ID
+    let id = matches.value_of("id").unwrap();
 
     // Concatenate all words into a single description string
     let mut desc = String::from("");
@@ -67,15 +116,20 @@ fn add_task(matches: &ArgMatches)
         }
     }
 
-    // Add Task
-    match tasks.add_task(matches.value_of("id"), &desc)
-    {
+    // Load Task List
+    let mut tasks = task_list::create_from_file("todo.txt");
+
+    // Get Task
+    let task = match tasks.get_task(id) {
         Err(e) => {
             eprintln!("Error: {}", e);
-            //TODO: exit?
+            return;
         }
-        Ok(_) => {}
-    }
+        Ok(task) => {task}
+    };
+
+    // Update description
+    task.set_desc(&desc);
 
     // Save Task List
     tasks.save();
@@ -83,14 +137,17 @@ fn add_task(matches: &ArgMatches)
 
 fn remove_task(matches: &ArgMatches)
 {
+    // Handle command line options
+    let id = matches.value_of("id").unwrap();
+
     // Load Task List
     let mut tasks = task_list::create_from_file("todo.txt");
 
     // Remove Task
-    match tasks.remove_task(matches.value_of("id")) {
+    match tasks.remove_task(id) {
         Err(e) => {
             eprintln!("Error: {}", e);
-            //TODO: exit?
+            return;
         }
         Ok(_) => { }
     }

@@ -40,6 +40,10 @@ impl Task {
     pub fn timestamp(&self) -> f64 {
         self.timestamp
     }
+
+    pub fn set_desc(&mut self, desc: &str) {
+        self.desc = desc.to_string();
+    }
 }
 
 fn split_once(in_string: &str) -> (Option<&str>, Option<&str>) {

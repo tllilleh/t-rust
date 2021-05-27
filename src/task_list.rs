@@ -117,12 +117,7 @@ impl TaskList {
         }
     }
 
-    pub fn remove_task(&mut self, prefix: Option<&str>) -> Result<(), TaskListError> {
-        let prefix = match prefix {
-            None => {return Err(TaskListError::BadPrefix)}
-            Some(prefix) => prefix
-        };
-
+    pub fn remove_task(&mut self, prefix:&str) -> Result<(), TaskListError> {
         let full_id = self.get_full_id(prefix)?;
 
         self.tasks.retain(|task| *task.id() != full_id);
@@ -154,6 +149,18 @@ impl TaskList {
                 return Err(TaskListError::BadPrefix);
             }
         }
+    }
+
+    pub fn get_task(&mut self, prefix: &str) -> Result<&mut task::Task, TaskListError> {
+        let full_id = self.get_full_id(prefix)?;
+
+        for task in &mut self.tasks {
+            if task.id().eq(&full_id) {
+                return Ok(task);
+            }
+        }
+
+        Err(TaskListError::BadPrefix)
     }
 }
 
