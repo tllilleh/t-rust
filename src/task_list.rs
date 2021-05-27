@@ -65,7 +65,7 @@ impl TaskList {
     }
 
     pub fn add_task(&mut self, parent_id: Option<&str>, id: Option<&str>, desc: &str) -> Result<(), TaskListError> {
-        // Check if task with this id already exists
+        // Check if task with this user specified id already exists
         match id {
             Some(id) => {
                 match self.get_task(id) {

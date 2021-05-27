@@ -99,9 +99,10 @@ pub fn create(parent_id: Option<&str>, id: Option<&str>, desc: &str) -> Task {
             // create a Sha1 object
             let mut hasher = Sha1::new();
             hasher.update(desc.to_string());
+            hasher.update(timestamp.to_string());
             show_full_id = false;
             format!("{:x}", hasher.finalize())
-        },
+        }
         Some(user_provided_id) => {
             show_full_id = true;
             user_provided_id.to_string()

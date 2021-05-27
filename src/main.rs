@@ -54,24 +54,32 @@ fn main() {
                 .multiple(true)
                 .required(true)))
         .subcommand(SubCommand::with_name("test"))
+        .arg(Arg::with_name("file")
+            .long("file")
+            .value_name("FILE")
+            .takes_value(true)
+            .required(true)
+            .help("FILE to use for task list"))
         .get_matches();
 
+    let task_file = matches.value_of("file").unwrap();
+
     match matches.subcommand() {
-        ("add", Some(add_matches)) => add_task(&add_matches),
-        ("edit", Some(edit_matches)) => edit_task(&edit_matches),
-        ("remove", Some(remove_matches)) => remove_task(&remove_matches),
+        ("add", Some(add_matches)) => add_task(task_file, &add_matches),
+        ("edit", Some(edit_matches)) => edit_task(task_file, &edit_matches),
+        ("remove", Some(remove_matches)) => remove_task(task_file, &remove_matches),
         ("test", Some(test_matches)) => test(&test_matches),
-        ("", None) => show_tasks(),
+        ("", None) => show_tasks(task_file),
         _ => unreachable!(),
     }
 }
 
-fn show_tasks() {
-    let tasks = task_list::create_from_file("todo.txt");
+fn show_tasks(task_file: &str) {
+    let tasks = task_list::create_from_file(task_file);
     tasks.show();
 }
 
-fn add_task(matches: &ArgMatches)
+fn add_task(task_file: &str, matches: &ArgMatches)
 {
     // Handle Command Line Options
     let parent_id = matches.value_of("parent_id");
@@ -79,7 +87,7 @@ fn add_task(matches: &ArgMatches)
     // Concatenate all words into a single description string
     let mut desc = String::from("");
     match matches.values_of("task") {
-        None => {},
+        None => {}
         Some(words) => {
             for word in words {
                 if desc.len() > 0 {
@@ -91,7 +99,7 @@ fn add_task(matches: &ArgMatches)
     }
 
     // Load Task List
-    let mut tasks = task_list::create_from_file("todo.txt");
+    let mut tasks = task_list::create_from_file(task_file);
 
     // Add Task
     match tasks.add_task(parent_id, matches.value_of("id"), &desc)
@@ -107,7 +115,7 @@ fn add_task(matches: &ArgMatches)
     tasks.save();
 }
 
-fn edit_task(matches: &ArgMatches)
+fn edit_task(task_file: &str, matches: &ArgMatches)
 {
     // Handle command line options
     // Get ID
@@ -116,7 +124,7 @@ fn edit_task(matches: &ArgMatches)
     // Concatenate all words into a single description string
     let mut desc = String::from("");
     match matches.values_of("task") {
-        None => {},
+        None => {}
         Some(words) => {
             for word in words {
                 if desc.len() > 0 {
@@ -128,7 +136,7 @@ fn edit_task(matches: &ArgMatches)
     }
 
     // Load Task List
-    let mut tasks = task_list::create_from_file("todo.txt");
+    let mut tasks = task_list::create_from_file(task_file);
 
     // Get Task
     let task = match tasks.get_task(id) {
@@ -146,14 +154,14 @@ fn edit_task(matches: &ArgMatches)
     tasks.save();
 }
 
-fn remove_task(matches: &ArgMatches)
+fn remove_task(task_file: &str, matches: &ArgMatches)
 {
     // Handle command line options
     let id = matches.value_of("id").unwrap();
     let force = matches.is_present("force");
 
     // Load Task List
-    let mut tasks = task_list::create_from_file("todo.txt");
+    let mut tasks = task_list::create_from_file(task_file);
 
     // Remove Task
     match tasks.remove_task(id, force) {
