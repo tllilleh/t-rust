@@ -7,14 +7,20 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum TaskListError {
-    #[error("Prefix matches more than one task")]
+    #[error("Prefix matches more than one task.")]
     AmbiguousPrefix,
 
-    #[error("Prefix matches no tasks")]
+    #[error("Prefix matches no tasks.")]
     BadPrefix,
 
-    #[error("A task with this id already exits")]
+    #[error("Parent prefix matches no tasks.")]
+    BadParentPrefix,
+
+    #[error("A task with this id already exits.")]
     DuplicateTask,
+
+    #[error("The task you are trying to remove has children.  Use --force.")]
+    RemoveHasChildren,
 
     // Represents all other cases of `std::io::Error`.
     #[error(transparent)]
@@ -39,19 +45,26 @@ where P: AsRef<Path>, {
 impl TaskList {
     pub fn show(&self) {
         println!("Tasks:");
+        self.show_tasks(None, "");
+    }
+
+    fn show_tasks(&self, parent_id: Option<&str>, indent: &str)
+    {
         let mut sorted_tasks = self.tasks.to_vec();
+        sorted_tasks.retain(|t| t.parent_id().as_deref() == parent_id);
         sorted_tasks.sort_by(|a, b| a.timestamp().partial_cmp(&b.timestamp()).unwrap());
         for task in sorted_tasks {
             match self.prefixes.get(task.id()) {
                 Some(prefix) => {
-                    println!("{:width$} - {}", prefix, task.desc(), width = self.prefix_max_len);
+                    println!("{}{:width$} - {}", indent, prefix, task.desc(), width = self.prefix_max_len);
+                    self.show_tasks(Some(task.id()), &(indent.to_string() + "  "));
                 }
                 None => {}
             }
         }
     }
 
-    pub fn add_task(&mut self, id: Option<&str>, desc: &str) -> Result<(), TaskListError> {
+    pub fn add_task(&mut self, parent_id: Option<&str>, id: Option<&str>, desc: &str) -> Result<(), TaskListError> {
         // Check if task with this id already exists
         match id {
             Some(id) => {
@@ -67,12 +80,30 @@ impl TaskList {
             None => {}
         }
 
-        let task = task::create(id, desc);
+        // Check if parent exists
+        let full_parent_id;
+        if parent_id.is_some() {
+            match self.get_full_id(parent_id.unwrap()) {
+                Ok(full_id) => {
+                    full_parent_id = Some(full_id);
+                }
+                Err(_) => {
+                    return Err(TaskListError::BadParentPrefix);
+                }
+            }
+        } else {
+            full_parent_id = None;
+        }
+
+        // Create Task
+        let task = task::create(full_parent_id.as_deref(), id, desc);
         let task_id = task.id().to_string();
 
+        // Add Task to Task List
         self.tasks.push(task);
         self.compute_prefixes();
 
+        // Show user added Task information
         let task_prefix: String;
         match self.prefixes.get(&task_id) {
             Some(prefix) => {
@@ -82,7 +113,6 @@ impl TaskList {
                 task_prefix = task_id.to_string();
             }
         }
-
         println!("added task {} ({})", task_prefix, task_id);
 
         Ok(())
@@ -135,8 +165,22 @@ impl TaskList {
         }
     }
 
-    pub fn remove_task(&mut self, prefix:&str) -> Result<(), TaskListError> {
+    pub fn remove_task(&mut self, prefix: &str, force: bool) -> Result<(), TaskListError> {
         let full_id = self.get_full_id(prefix)?;
+
+        let children = self.get_children_tasks(&full_id)?;
+        let children_ids: Vec<String> = children.into_iter().map(|c| c.id().to_string()).collect();
+        if children_ids.len() > 0 {
+            if force {
+                for id in &children_ids {
+                    self.remove_task(id, force)?;
+                }
+            }
+            else
+            {
+                return Err(TaskListError::RemoveHasChildren);
+            }
+        }
 
         self.tasks.retain(|task| *task.id() != full_id);
         self.compute_prefixes();
@@ -182,6 +226,19 @@ impl TaskList {
         }
 
         Err(TaskListError::BadPrefix)
+    }
+
+    pub fn get_children_tasks(&mut self, prefix: &str) -> Result<Vec<&mut task::Task>, TaskListError> {
+        let mut children = Vec::new();
+        let full_id = self.get_full_id(prefix)?;
+
+        for task in &mut self.tasks {
+            if task.parent_id().eq(&Some(full_id.to_string())) {
+                children.push(task);
+            }
+        }
+
+        Ok(children)
     }
 }
 

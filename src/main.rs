@@ -17,7 +17,12 @@ fn main() {
                 .long("id")
                 .value_name("ID")
                 .takes_value(true)
-                .help("Create task with given ID"))
+                .help("Create task with ID, otherwise one will be auto generated"))
+            .arg(Arg::with_name("parent_id")
+                .long("parent")
+                .value_name("ID")
+                .takes_value(true)
+                .help("Create task as a sub-task"))
             .arg(Arg::with_name("task")
                 .value_name("DESC")
                 .help("Task description")
@@ -30,7 +35,11 @@ fn main() {
                 .value_name("ID")
                 .takes_value(true)
                 .required(true)
-                .help("Task ID to remove")))
+                .help("Task ID to remove"))
+            .arg(Arg::with_name("force")
+                .long("force")
+                .required(false)
+                .help("Force remove a task if it has children")))
         .subcommand(SubCommand::with_name("edit")
             .alias("e")
             .about("Edit a task")
@@ -65,6 +74,8 @@ fn show_tasks() {
 fn add_task(matches: &ArgMatches)
 {
     // Handle Command Line Options
+    let parent_id = matches.value_of("parent_id");
+
     // Concatenate all words into a single description string
     let mut desc = String::from("");
     match matches.values_of("task") {
@@ -83,7 +94,7 @@ fn add_task(matches: &ArgMatches)
     let mut tasks = task_list::create_from_file("todo.txt");
 
     // Add Task
-    match tasks.add_task(matches.value_of("id"), &desc)
+    match tasks.add_task(parent_id, matches.value_of("id"), &desc)
     {
         Err(e) => {
             eprintln!("Error: {}", e);
@@ -139,12 +150,13 @@ fn remove_task(matches: &ArgMatches)
 {
     // Handle command line options
     let id = matches.value_of("id").unwrap();
+    let force = matches.is_present("force");
 
     // Load Task List
     let mut tasks = task_list::create_from_file("todo.txt");
 
     // Remove Task
-    match tasks.remove_task(id) {
+    match tasks.remove_task(id, force) {
         Err(e) => {
             eprintln!("Error: {}", e);
             return;
@@ -159,9 +171,9 @@ fn remove_task(matches: &ArgMatches)
 fn test(_matches: &ArgMatches) {
     let mut tasks = Vec::new();
 
-    tasks.push(task::create(None, "one"));
-    tasks.push(task::create(None, "two"));
-    tasks.push(task::create(None, "three"));
+    tasks.push(task::create(None, None, "one"));
+    tasks.push(task::create(None, None, "two"));
+    tasks.push(task::create(None, None, "three"));
 
     let json = r#"
         {

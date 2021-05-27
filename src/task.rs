@@ -44,6 +44,10 @@ impl Task {
     pub fn set_desc(&mut self, desc: &str) {
         self.desc = desc.to_string();
     }
+
+    pub fn parent_id(&self) -> &Option<String> {
+        &self.parent_id
+    }
 }
 
 fn split_once(in_string: &str) -> (Option<&str>, Option<&str>) {
@@ -62,22 +66,22 @@ pub fn create_from_string(string: &str) -> Task {
             //println!("json: {}", json);
 
             if json.trim().len() == 0 {
-                return create(None, desc);
+                return create(None, None, desc);
             }
 
             let mut task:Task = serde_json::from_str(json).unwrap();
             task.desc = desc.trim().to_string();
             return task
         } else {
-            return create(None, desc);
+            return create(None, None, desc);
         }
     }
 
     // TODO: this should return None or an error?
-    return create(None, "");
+    return create(None, None, "");
 }
 
-pub fn create(id: Option<&str>, desc: &str) -> Task {
+pub fn create(parent_id: Option<&str>, id: Option<&str>, desc: &str) -> Task {
     let show_full_id: bool;
     let timestamp: f64;
 
@@ -107,7 +111,7 @@ pub fn create(id: Option<&str>, desc: &str) -> Task {
     Task {
         id,
         desc : desc.to_string(),
-        parent_id: None,
+        parent_id : parent_id.map(String::from),
         show_full_id,
         timestamp,
     }
