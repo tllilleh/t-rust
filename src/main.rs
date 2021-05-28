@@ -3,15 +3,19 @@ mod task_list;
 
 #[macro_use]
 extern crate clap;
-use clap::{Arg, App, SubCommand, ArgMatches};
+use clap::{Arg, App, AppSettings, SubCommand, ArgMatches};
 
 fn main() {
     let matches = App::new("t")
+        .settings(&[
+            AppSettings::DisableHelpSubcommand,
+            AppSettings::VersionlessSubcommands,
+        ])
         .version(crate_version!())
         .author("Trent Lillehaugen <tllilleh@gmail.com>")
         .about("simple todo tracker")
         .subcommand(SubCommand::with_name("add")
-            .alias("a")
+            .visible_alias("a")
             .about("Create a new task")
             .arg(Arg::with_name("id")
                 .long("id")
@@ -29,7 +33,7 @@ fn main() {
                 .multiple(true)
                 .required(true)))
         .subcommand(SubCommand::with_name("remove")
-            .alias("r")
+            .visible_alias("r")
             .about("Remove a task")
             .arg(Arg::with_name("id")
                 .value_name("ID")
@@ -41,7 +45,7 @@ fn main() {
                 .required(false)
                 .help("Force remove a task if it has children")))
         .subcommand(SubCommand::with_name("edit")
-            .alias("e")
+            .visible_alias("e")
             .about("Edit a task")
             .arg(Arg::with_name("id")
                 .value_name("ID")
@@ -51,6 +55,19 @@ fn main() {
             .arg(Arg::with_name("task")
                 .value_name("DESC")
                 .help("Task description")
+                .multiple(true)
+                .required(true)))
+        .subcommand(SubCommand::with_name("tag")
+            .visible_alias("t")
+            .about("Tag/Untag a task")
+            .arg(Arg::with_name("id")
+                .value_name("ID")
+                .takes_value(true)
+                .required(true)
+                .help("Task ID to tag"))
+            .arg(Arg::with_name("tags")
+                 .value_name("TAG")
+                 .help("Tags")
                 .multiple(true)
                 .required(true)))
         .subcommand(SubCommand::with_name("test"))
@@ -68,6 +85,7 @@ fn main() {
         ("add", Some(add_matches)) => add_task(task_file, &add_matches),
         ("edit", Some(edit_matches)) => edit_task(task_file, &edit_matches),
         ("remove", Some(remove_matches)) => remove_task(task_file, &remove_matches),
+        ("tag", Some(tag_matches)) => tag_task(task_file, &tag_matches),
         ("test", Some(test_matches)) => test(&test_matches),
         ("", None) => show_tasks(task_file),
         _ => unreachable!(),
@@ -175,6 +193,40 @@ fn remove_task(task_file: &str, matches: &ArgMatches)
     // Save Task List
     tasks.save();
 }
+
+fn tag_task(task_file: &str, matches: &ArgMatches)
+{
+    // Handle command line options
+    // Get ID
+    let id = matches.value_of("id").unwrap();
+
+    // Concatenate all words into a single description string
+    let mut desc = String::from("");
+    match matches.values_of("tags") {
+        None => {}
+        Some(tags) => {
+            for tag in tags {
+                println!("tag: {}", tag);
+            }
+        }
+    }
+
+    // Load Task List
+    let mut tasks = task_list::create_from_file(task_file);
+
+    // Get Task
+    let task = match tasks.get_task(id) {
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return;
+        }
+        Ok(task) => {task}
+    };
+
+    // Save Task List
+    tasks.save();
+}
+
 
 fn test(_matches: &ArgMatches) {
     let mut tasks = Vec::new();
