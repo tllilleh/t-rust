@@ -47,29 +47,44 @@ where
 impl TaskList {
     pub fn show(&self) {
         println!("Tasks:");
-        self.show_tasks(None, "");
+        self.show_tasks(None, "│");
     }
 
     fn show_tasks(&self, parent_id: Option<&str>, indent: &str) {
         let mut sorted_tasks = self.tasks.to_vec();
         sorted_tasks.retain(|t| t.parent_id().as_deref() == parent_id);
         sorted_tasks.sort_by(|a, b| a.timestamp().partial_cmp(&b.timestamp()).unwrap());
-        for task in sorted_tasks {
+        let num_tasks = sorted_tasks.len();
+        for (ii, task) in sorted_tasks.iter().enumerate() {
+            let last_task = ii == num_tasks - 1;
             if let Some(prefix) = self.prefixes.get(task.id()) {
+                // Create list of tags, e.g. [tag1] [tag2] [tag3]
                 let mut tags = "".to_string();
                 for tag in task.tags() {
                     tags += &format!("[{}] ", tag);
                 }
 
-                println!(
-                    "{}{:width$} - {}{}",
-                    indent,
-                    prefix,
-                    tags,
-                    task.desc(),
-                    width = self.prefix_max_len
-                );
-                self.show_tasks(Some(task.id()), &(indent.to_string() + "  "));
+                let indent_item = if last_task {
+                    let mut a = indent.to_string();
+                    a.pop();
+                    a + "└─ "
+                } else {
+                    let mut a = indent.to_string();
+                    a.pop();
+                    a + "├─ "
+                };
+
+                println!("{}{}: {}{}", indent_item, prefix, tags, task.desc());
+
+                let next_indent = if last_task {
+                    let mut a = indent.to_string();
+                    a.pop();
+                    a + "   │"
+                } else {
+                    indent.to_string() + "  │"
+                };
+
+                self.show_tasks(Some(task.id()), &next_indent);
             }
         }
     }
