@@ -17,6 +17,9 @@ pub struct Task {
     show_full_id : bool,
     #[serde(default)]
     timestamp : f64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    tags: Vec<String>,
+
 }
 
 impl Task {
@@ -47,6 +50,20 @@ impl Task {
 
     pub fn parent_id(&self) -> &Option<String> {
         &self.parent_id
+    }
+
+    pub fn add_tag(&mut self, tag: &str) {
+        if !self.tags.contains(&tag.to_string()) {
+            self.tags.push(tag.to_string());
+        }
+    }
+
+    pub fn remove_tag(&mut self, tag: &str) {
+        self.tags.retain(|x| x != tag);
+    }
+
+    pub fn tags(&self) -> &Vec<String> {
+        &self.tags
     }
 }
 
@@ -115,5 +132,6 @@ pub fn create(parent_id: Option<&str>, id: Option<&str>, desc: &str) -> Task {
         parent_id : parent_id.map(String::from),
         show_full_id,
         timestamp,
+        tags: Vec::new(),
     }
 }

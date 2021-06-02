@@ -66,8 +66,8 @@ fn main() {
                 .required(true)
                 .help("Task ID to tag"))
             .arg(Arg::with_name("tags")
-                 .value_name("TAG")
-                 .help("Tags")
+                .value_name("TAG")
+                .help("Tags")
                 .multiple(true)
                 .required(true)))
         .subcommand(SubCommand::with_name("test"))
@@ -200,17 +200,6 @@ fn tag_task(task_file: &str, matches: &ArgMatches)
     // Get ID
     let id = matches.value_of("id").unwrap();
 
-    // Concatenate all words into a single description string
-    let mut desc = String::from("");
-    match matches.values_of("tags") {
-        None => {}
-        Some(tags) => {
-            for tag in tags {
-                println!("tag: {}", tag);
-            }
-        }
-    }
-
     // Load Task List
     let mut tasks = task_list::create_from_file(task_file);
 
@@ -222,6 +211,26 @@ fn tag_task(task_file: &str, matches: &ArgMatches)
         }
         Ok(task) => {task}
     };
+
+    // Update tags
+    match matches.values_of("tags") {
+        None => {}
+        Some(tags) => {
+            for tag in tags {
+                if tag.starts_with("-") {
+                    // Remove '-' from tag name.
+                    let mut chars = tag.chars();
+                    chars.next();
+                    let tag = chars.as_str();
+                    println!("removing tag: {}", tag);
+                    task.remove_tag(tag);
+                } else {
+                    println!("adding tag: {}", tag);
+                    task.add_tag(tag);
+                }
+            }
+        }
+    }
 
     // Save Task List
     tasks.save();

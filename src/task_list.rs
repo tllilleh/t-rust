@@ -56,7 +56,11 @@ impl TaskList {
         for task in sorted_tasks {
             match self.prefixes.get(task.id()) {
                 Some(prefix) => {
-                    println!("{}{:width$} - {}", indent, prefix, task.desc(), width = self.prefix_max_len);
+                    let mut tags = "".to_string();
+                    for tag in task.tags() {
+                        tags += &format!("[{}] ", tag);
+                    }
+                    println!("{}{:width$} - {}{}", indent, prefix, tags, task.desc(), width = self.prefix_max_len);
                     self.show_tasks(Some(task.id()), &(indent.to_string() + "  "));
                 }
                 None => {}
@@ -160,8 +164,8 @@ impl TaskList {
         let mut file = BufWriter::new(file);
 
         for task in &self.tasks {
-            file.write(task.to_string().as_bytes()).expect("cannot write data");
-            file.write("\n".to_string().as_bytes()).expect("cannot write data");
+            file.write_all(task.to_string().as_bytes()).expect("cannot write data");
+            file.write_all("\n".to_string().as_bytes()).expect("cannot write data");
         }
     }
 
