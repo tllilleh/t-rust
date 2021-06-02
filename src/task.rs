@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sha1::{Sha1, Digest};
+use sha1::{Digest, Sha1};
 use std::time::SystemTime;
 
 fn is_false(operand: &bool) -> bool {
@@ -8,18 +8,17 @@ fn is_false(operand: &bool) -> bool {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Task {
-    id : String,
+    id: String,
     #[serde(default, skip_serializing)]
-    desc : String,
+    desc: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    parent_id : Option<String>,
+    parent_id: Option<String>,
     #[serde(default, skip_serializing_if = "is_false")]
-    show_full_id : bool,
+    show_full_id: bool,
     #[serde(default)]
-    timestamp : f64,
+    timestamp: f64,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     tags: Vec<String>,
-
 }
 
 impl Task {
@@ -31,7 +30,7 @@ impl Task {
         &self.desc
     }
 
-    pub fn to_string(&self) -> String {
+    pub fn to_file_string(&self) -> String {
         let json = serde_json::to_string(&self).unwrap();
         format!("{} | {}", self.desc(), json)
     }
@@ -74,7 +73,7 @@ fn split_once(in_string: &str) -> (Option<&str>, Option<&str>) {
     (first, second)
 }
 
-pub fn create_from_string(string: &str) -> Task {
+pub fn create_from_file_string(string: &str) -> Task {
     let (desc, json) = split_once(string);
 
     if let Some(desc) = desc {
@@ -82,20 +81,20 @@ pub fn create_from_string(string: &str) -> Task {
         if let Some(json) = json {
             //println!("json: {}", json);
 
-            if json.trim().len() == 0 {
+            if json.trim().is_empty() {
                 return create(None, None, desc);
             }
 
-            let mut task:Task = serde_json::from_str(json).unwrap();
+            let mut task: Task = serde_json::from_str(json).unwrap();
             task.desc = desc.trim().to_string();
-            return task
+            return task;
         } else {
             return create(None, None, desc);
         }
     }
 
     // TODO: this should return None or an error?
-    return create(None, None, "");
+    create(None, None, "")
 }
 
 pub fn create(parent_id: Option<&str>, id: Option<&str>, desc: &str) -> Task {
@@ -128,8 +127,8 @@ pub fn create(parent_id: Option<&str>, id: Option<&str>, desc: &str) -> Task {
 
     Task {
         id,
-        desc : desc.to_string(),
-        parent_id : parent_id.map(String::from),
+        desc: desc.to_string(),
+        parent_id: parent_id.map(String::from),
         show_full_id,
         timestamp,
         tags: Vec::new(),

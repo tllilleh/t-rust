@@ -1,8 +1,8 @@
 use super::task;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead, BufWriter, Write};
 use std::path::Path;
-use std::collections::HashMap;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -28,16 +28,18 @@ pub enum TaskListError {
 }
 
 pub struct TaskList {
-    file : String,
-    tasks : Vec<task::Task>,
-    prefixes : HashMap<String, String>,
-    prefix_max_len : usize
+    file: String,
+    tasks: Vec<task::Task>,
+    prefixes: HashMap<String, String>,
+    prefix_max_len: usize,
 }
 
 // The output is wrapped in a Result to allow matching on errors
 // Returns an Iterator to the Reader of the lines of the file.
 fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where P: AsRef<Path>, {
+where
+    P: AsRef<Path>,
+{
     let file = File::open(filename)?;
     Ok(io::BufReader::new(file).lines())
 }
@@ -48,55 +50,59 @@ impl TaskList {
         self.show_tasks(None, "");
     }
 
-    fn show_tasks(&self, parent_id: Option<&str>, indent: &str)
-    {
+    fn show_tasks(&self, parent_id: Option<&str>, indent: &str) {
         let mut sorted_tasks = self.tasks.to_vec();
         sorted_tasks.retain(|t| t.parent_id().as_deref() == parent_id);
         sorted_tasks.sort_by(|a, b| a.timestamp().partial_cmp(&b.timestamp()).unwrap());
         for task in sorted_tasks {
-            match self.prefixes.get(task.id()) {
-                Some(prefix) => {
-                    let mut tags = "".to_string();
-                    for tag in task.tags() {
-                        tags += &format!("[{}] ", tag);
-                    }
-                    println!("{}{:width$} - {}{}", indent, prefix, tags, task.desc(), width = self.prefix_max_len);
-                    self.show_tasks(Some(task.id()), &(indent.to_string() + "  "));
+            if let Some(prefix) = self.prefixes.get(task.id()) {
+                let mut tags = "".to_string();
+                for tag in task.tags() {
+                    tags += &format!("[{}] ", tag);
                 }
-                None => {}
+
+                println!(
+                    "{}{:width$} - {}{}",
+                    indent,
+                    prefix,
+                    tags,
+                    task.desc(),
+                    width = self.prefix_max_len
+                );
+                self.show_tasks(Some(task.id()), &(indent.to_string() + "  "));
             }
         }
     }
 
-    pub fn add_task(&mut self, parent_id: Option<&str>, id: Option<&str>, desc: &str) -> Result<(), TaskListError> {
+    pub fn add_task(
+        &mut self,
+        parent_id: Option<&str>,
+        id: Option<&str>,
+        desc: &str,
+    ) -> Result<(), TaskListError> {
         // Check if task with this user specified id already exists
-        match id {
-            Some(id) => {
-                match self.get_task(id) {
-                    Ok(task) => {
-                        if id == task.id() {
-                            return Err(TaskListError::DuplicateTask);
-                        }
-                    }
-                    Err(_) => {}
+        if let Some(id) = id {
+            if let Ok(task) = self.get_task(id) {
+                if id == task.id() {
+                    return Err(TaskListError::DuplicateTask);
                 }
             }
-            None => {}
         }
 
         // Check if parent exists
         let full_parent_id;
-        if parent_id.is_some() {
-            match self.get_full_id(parent_id.unwrap()) {
+        match parent_id {
+            Some(parent_id) => match self.get_full_id(parent_id) {
                 Ok(full_id) => {
                     full_parent_id = Some(full_id);
                 }
                 Err(_) => {
                     return Err(TaskListError::BadParentPrefix);
                 }
+            },
+            None => {
+                full_parent_id = None;
             }
-        } else {
-            full_parent_id = None;
         }
 
         // Create Task
@@ -164,8 +170,7 @@ impl TaskList {
         let mut file = BufWriter::new(file);
 
         for task in &self.tasks {
-            file.write_all(task.to_string().as_bytes()).expect("cannot write data");
-            file.write_all("\n".to_string().as_bytes()).expect("cannot write data");
+            file.write_all((task.to_file_string() + "\n").as_bytes()).expect("cannot write data");
         }
     }
 
@@ -174,14 +179,12 @@ impl TaskList {
 
         let children = self.get_children_tasks(&full_id)?;
         let children_ids: Vec<String> = children.into_iter().map(|c| c.id().to_string()).collect();
-        if children_ids.len() > 0 {
+        if !children_ids.is_empty() {
             if force {
                 for id in &children_ids {
                     self.remove_task(id, force)?;
                 }
-            }
-            else
-            {
+            } else {
                 return Err(TaskListError::RemoveHasChildren);
             }
         }
@@ -211,12 +214,8 @@ impl TaskList {
         }
 
         match full_id {
-            Some(full_id) => {
-                return Ok(full_id);
-            }
-            None => {
-                return Err(TaskListError::BadPrefix);
-            }
+            Some(full_id) => Ok(full_id),
+            None => Err(TaskListError::BadPrefix),
         }
     }
 
@@ -232,7 +231,10 @@ impl TaskList {
         Err(TaskListError::BadPrefix)
     }
 
-    pub fn get_children_tasks(&mut self, prefix: &str) -> Result<Vec<&mut task::Task>, TaskListError> {
+    pub fn get_children_tasks(
+        &mut self,
+        prefix: &str,
+    ) -> Result<Vec<&mut task::Task>, TaskListError> {
         let mut children = Vec::new();
         let full_id = self.get_full_id(prefix)?;
 
@@ -249,25 +251,16 @@ impl TaskList {
 pub fn create_from_file(file: &str) -> TaskList {
     let mut tasks = Vec::new();
 
-    // File hosts must exist in current path before this produces output
     if let Ok(lines) = read_lines(file) {
-        // Consumes the iterator, returns an (Optional) String
-        for line in lines {
-            if let Ok(task_string) = line {
-                let task = task::create_from_string(&task_string);
-                tasks.push(task);
-            }
+        for task_string in lines.into_iter().flatten() {
+            let task = task::create_from_file_string(&task_string);
+            tasks.push(task);
         }
     }
 
-    let mut task_list = TaskList {
-        file: file.to_string(),
-        tasks,
-        prefixes : HashMap::new(),
-        prefix_max_len : 64
-    };
+    let mut task_list =
+        TaskList { file: file.to_string(), tasks, prefixes: HashMap::new(), prefix_max_len: 64 };
 
     task_list.compute_prefixes();
     task_list
 }
-
