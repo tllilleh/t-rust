@@ -51,8 +51,12 @@ impl TaskList {
     }
 
     fn show_tasks(&self, parent_id: Option<&str>, indent: &str) {
-        let mut sorted_tasks = self.tasks.to_vec();
-        sorted_tasks.retain(|t| t.parent_id().as_deref() == parent_id);
+        let mut sorted_tasks = Vec::new();
+        for task in &self.tasks {
+            if task.parent_id().as_deref() == parent_id {
+                sorted_tasks.push(task);
+            }
+        }
         sorted_tasks.sort_by(|a, b| a.timestamp().partial_cmp(&b.timestamp()).unwrap());
         let num_tasks = sorted_tasks.len();
         for (ii, task) in sorted_tasks.iter().enumerate() {
@@ -184,7 +188,10 @@ impl TaskList {
         let file = File::create(&self.file).expect("cannot open file for write");
         let mut file = BufWriter::new(file);
 
-        for task in &self.tasks {
+        let mut sorted_tasks = self.tasks.to_vec();
+        sorted_tasks.sort_by(|a, b| a.id().partial_cmp(b.id()).unwrap());
+
+        for task in &sorted_tasks {
             file.write_all((task.to_file_string() + "\n").as_bytes()).expect("cannot write data");
         }
     }
