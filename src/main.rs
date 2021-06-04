@@ -93,7 +93,6 @@ fn main() {
                         .required(true),
                 ),
         )
-        .subcommand(SubCommand::with_name("test"))
         .arg(
             Arg::with_name("file")
                 .long("file")
@@ -111,14 +110,16 @@ fn main() {
         ("edit", Some(edit_matches)) => edit_task(task_file, &edit_matches),
         ("remove", Some(remove_matches)) => remove_task(task_file, &remove_matches),
         ("tag", Some(tag_matches)) => tag_task(task_file, &tag_matches),
-        ("test", Some(test_matches)) => test(&test_matches),
         ("", None) => show_tasks(task_file),
         _ => unreachable!(),
     }
 }
 
 fn show_tasks(task_file: &str) {
+    // Load Task List
     let tasks = task_list::create_from_file(task_file);
+
+    // Show Task List
     tasks.show();
 }
 
@@ -248,38 +249,4 @@ fn tag_task(task_file: &str, matches: &ArgMatches) {
 
     // Save Task List
     tasks.save();
-}
-
-fn test(_matches: &ArgMatches) {
-    let mut tasks = vec![
-        task::create(None, None, "one"),
-        task::create(None, None, "two"),
-        task::create(None, None, "three"),
-    ];
-
-    let json = r#"
-        {
-            "id": "test"
-        }
-    "#;
-
-    let imported_task: task::Task = serde_json::from_str(json).unwrap();
-    tasks.push(imported_task);
-
-    // Serialize it to a JSON string.
-    let mut jsons = Vec::new();
-    for task in &tasks {
-        jsons.push(task.to_file_string());
-    }
-
-    let mut tasks2 = Vec::new();
-
-    for json in &jsons {
-        println!("{}", json);
-        tasks2.push(task::create_from_file_string(json));
-    }
-
-    for task in &tasks2 {
-        println!("{}", task.to_file_string());
-    }
 }
