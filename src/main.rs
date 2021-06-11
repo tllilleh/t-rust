@@ -3,10 +3,11 @@ mod task_list;
 
 #[macro_use]
 extern crate clap;
-use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
+use clap::{App, AppSettings, Arg, ArgMatches, Shell, SubCommand};
+use std::str::FromStr;
 
-fn main() {
-    let matches = App::new("t")
+fn get_args() -> clap::App<'static, 'static> {
+    App::new("t")
         .settings(&[AppSettings::DisableHelpSubcommand, AppSettings::VersionlessSubcommands])
         .version(crate_version!())
         .author("Trent Lillehaugen <tllilleh@gmail.com>")
@@ -94,14 +95,48 @@ fn main() {
                 ),
         )
         .arg(
+            Arg::with_name("completions")
+                .long("completions")
+                .takes_value(true)
+                .value_name("SHELL")
+                .help(
+                    "Generate shell completions for one of: Bash, Fish, Zsh, PowerShell, Elvish.",
+                ),
+        )
+        .arg(
             Arg::with_name("file")
                 .long("file")
                 .value_name("FILE")
                 .takes_value(true)
-                .required(true)
+                .required_unless("completions")
                 .help("FILE to use for task list"),
         )
-        .get_matches();
+}
+
+fn main() {
+    let matches = get_args().get_matches();
+
+    if let Some(shell) = matches.value_of("completions") {
+        match Shell::from_str(shell) {
+            Ok(Shell::Bash) => {
+                get_args().gen_completions_to("t", Shell::Bash, &mut std::io::stdout())
+            }
+            Ok(Shell::Fish) => {
+                get_args().gen_completions_to("t", Shell::Fish, &mut std::io::stdout())
+            }
+            Ok(Shell::Zsh) => {
+                get_args().gen_completions_to("t", Shell::Zsh, &mut std::io::stdout())
+            }
+            Ok(Shell::PowerShell) => {
+                get_args().gen_completions_to("t", Shell::PowerShell, &mut std::io::stdout())
+            }
+            Ok(Shell::Elvish) => {
+                get_args().gen_completions_to("t", Shell::Elvish, &mut std::io::stdout())
+            }
+            _ => println!("unknown shell: {}", shell),
+        }
+        std::process::exit(0);
+    }
 
     let task_file = matches.value_of("file").unwrap();
 
