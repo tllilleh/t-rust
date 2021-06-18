@@ -68,14 +68,14 @@ impl TaskList {
                     tags += &format!("[{}] ", tag);
                 }
 
-                let indent_item = if last_task {
+                let indent_item = {
                     let mut a = indent.to_string();
                     a.pop();
-                    a + "└─ "
-                } else {
-                    let mut a = indent.to_string();
-                    a.pop();
-                    a + "├─ "
+                    if last_task {
+                        a + "└─ "
+                    } else {
+                        a + "├─ "
+                    }
                 };
 
                 println!("{}{}: {}{}", indent_item, prefix, tags, task.desc());
