@@ -141,10 +141,10 @@ fn main() {
     let task_file = matches.value_of("file").unwrap();
 
     match matches.subcommand() {
-        ("add", Some(add_matches)) => add_task(task_file, &add_matches),
-        ("edit", Some(edit_matches)) => edit_task(task_file, &edit_matches),
-        ("remove", Some(remove_matches)) => remove_task(task_file, &remove_matches),
-        ("tag", Some(tag_matches)) => tag_task(task_file, &tag_matches),
+        ("add", Some(add_matches)) => add_task(task_file, add_matches),
+        ("edit", Some(edit_matches)) => edit_task(task_file, edit_matches),
+        ("remove", Some(remove_matches)) => remove_task(task_file, remove_matches),
+        ("tag", Some(tag_matches)) => tag_task(task_file, tag_matches),
         ("", None) => show_tasks(task_file),
         _ => unreachable!(),
     }
