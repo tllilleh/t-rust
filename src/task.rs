@@ -99,22 +99,16 @@ pub fn create_from_file_string(string: &str) -> Task {
 
 pub fn create(parent_id: Option<&str>, id: Option<&str>, desc: &str) -> Task {
     let show_full_id: bool;
-    let timestamp: f64;
-
-    match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
-        Err(_) => {
-            timestamp = 0.0;
-        }
-        Ok(ts) => {
-            timestamp = ts.as_secs_f64();
-        }
-    }
+    let timestamp: f64 = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+        Err(_) => 0.0,
+        Ok(ts) => ts.as_secs_f64(),
+    };
 
     let id = match id {
         None => {
             // create a Sha1 object
             let mut hasher = Sha1::new();
-            hasher.update(desc.to_string());
+            hasher.update(desc);
             hasher.update(timestamp.to_string());
             show_full_id = false;
             format!("{:x}", hasher.finalize())

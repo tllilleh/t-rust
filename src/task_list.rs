@@ -133,15 +133,10 @@ impl TaskList {
         self.compute_prefixes();
 
         // Show user added Task information
-        let task_prefix: String;
-        match self.prefixes.get(&task_id) {
-            Some(prefix) => {
-                task_prefix = prefix.to_string();
-            }
-            None => {
-                task_prefix = task_id.to_string();
-            }
-        }
+        let task_prefix: String = match self.prefixes.get(&task_id) {
+            Some(prefix) => prefix.to_string(),
+            None => task_id.to_string(),
+        };
         println!("added task {} ({})", task_prefix, task_id);
 
         Ok(())
