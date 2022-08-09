@@ -19,6 +19,8 @@ pub struct Task {
     timestamp: f64,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     tags: Vec<String>,
+    #[serde(default)]
+    completed_timestamp: f64,
 }
 
 impl Task {
@@ -63,6 +65,22 @@ impl Task {
 
     pub fn tags(&self) -> &Vec<String> {
         &self.tags
+    }
+
+    pub fn is_completed(&self) -> bool {
+        self.completed_timestamp != 0.0
+    }
+
+    pub fn set_complete(&mut self, complete: bool) {
+        if complete {
+            self.completed_timestamp =
+                match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+                    Err(_) => 0.0,
+                    Ok(ts) => ts.as_secs_f64(),
+                };
+        } else {
+            self.completed_timestamp = 0.0;
+        }
     }
 }
 
@@ -124,7 +142,8 @@ pub fn create(parent_id: Option<&str>, id: Option<&str>, desc: &str) -> Task {
         desc: desc.to_string(),
         parent_id: parent_id.map(String::from),
         show_full_id,
-        timestamp,
+        timestamp: 0.0,
         tags: Vec::new(),
+        completed_timestamp: 0.0,
     }
 }

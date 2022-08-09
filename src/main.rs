@@ -57,6 +57,35 @@ fn get_args() -> clap::App<'static, 'static> {
                 ),
         )
         .subcommand(
+            SubCommand::with_name("complete")
+                .visible_alias("c")
+                .about("Complete a task")
+                .arg(
+                    Arg::with_name("id")
+                        .value_name("ID")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Task ID to complete"),
+                )
+                .arg(
+                    Arg::with_name("force")
+                        .long("force")
+                        .required(false)
+                        .help("Force complete a task if it has children"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name("uncomplete")
+                .visible_alias("u").about("Uncomplete a task")
+                .arg(
+                    Arg::with_name("id")
+                    .value_name("ID")
+                    .takes_value(true)
+                    .required(true)
+                    .help("Task ID to uncomplete"),
+                ),
+        )
+        .subcommand(
             SubCommand::with_name("edit")
                 .visible_alias("e")
                 .about("Edit a task")
@@ -144,6 +173,8 @@ fn main() {
         ("add", Some(add_matches)) => add_task(task_file, add_matches),
         ("edit", Some(edit_matches)) => edit_task(task_file, edit_matches),
         ("remove", Some(remove_matches)) => remove_task(task_file, remove_matches),
+        ("complete", Some(complete_matches)) => complete_task(task_file, complete_matches),
+        ("uncomplete", Some(uncomplete_matches)) => uncomplete_task(task_file, uncomplete_matches),
         ("tag", Some(tag_matches)) => tag_task(task_file, tag_matches),
         ("", None) => show_tasks(task_file),
         _ => unreachable!(),
@@ -240,6 +271,47 @@ fn remove_task(task_file: &str, matches: &ArgMatches) {
         eprintln!("Error: {}", e);
         return;
     }
+
+    // Save Task List
+    tasks.save();
+}
+
+fn complete_task(task_file: &str, matches: &ArgMatches) {
+    // Handle command line options
+    let id = matches.value_of("id").unwrap();
+    let force = matches.is_present("force");
+
+    // Load Task List
+    let mut tasks = task_list::create_from_file(task_file);
+
+    // Complete Task
+    if let Err(e) = tasks.complete_task(id, force) {
+        eprintln!("Error: {}", e);
+        return;
+    }
+
+    // Save Task List
+    tasks.save();
+}
+
+fn uncomplete_task(task_file: &str, matches: &ArgMatches) {
+    // Handle command line options
+    let id = matches.value_of("id").unwrap();
+
+    // Load Task List
+    let mut tasks = task_list::create_from_file(task_file);
+
+    // Get Task
+    let task = match tasks.get_task(id) {
+        Err(e) => {
+            eprintln!("Error: {}", e);
+            return;
+        }
+        Ok(task) => task,
+    };
+
+    // Unmplete Task
+    task.set_complete(false);
 
     // Save Task List
     tasks.save();

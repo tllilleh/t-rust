@@ -1,7 +1,7 @@
 use super::task;
 use std::collections::HashMap;
-use std::fs::File;
 use std::fmt::Write as _;
+use std::fs::File;
 use std::io::{self, BufRead, BufWriter, Write};
 use std::path::Path;
 use thiserror::Error;
@@ -22,6 +22,9 @@ pub enum TaskListError {
 
     #[error("The task you are trying to remove has children.  Use --force.")]
     RemoveHasChildren,
+
+    #[error("The task you are trying to complete has children.  Use --force.")]
+    CompleteHasChildren,
 
     // Represents all other cases of `std::io::Error`.
     #[error(transparent)]
@@ -73,20 +76,30 @@ impl TaskList {
                     let mut a = indent.to_string();
                     a.pop();
                     if last_task {
-                        a + "└─ "
+                        a + "└─"
                     } else {
-                        a + "├─ "
+                        a + "├─"
                     }
                 };
 
-                println!("{}{}: {}{}", indent_item, prefix, tags, task.desc());
+                let checkmark = {
+                    if task.is_completed() {
+                        //"☒"
+                        "[X]"
+                    } else {
+                        //"☐"
+                        "[ ]"
+                    }
+                };
+
+                println!("{} {} {}: {}{}", indent_item, checkmark, prefix, tags, task.desc());
 
                 let next_indent = if last_task {
                     let mut a = indent.to_string();
                     a.pop();
-                    a + "   │"
+                    a + "    │"
                 } else {
-                    indent.to_string() + "  │"
+                    indent.to_string() + "   │"
                 };
 
                 self.show_tasks(Some(task.id()), &next_indent);
@@ -211,6 +224,48 @@ impl TaskList {
         self.compute_prefixes();
 
         println!("removed task {} ({})", prefix, full_id);
+
+        Ok(())
+    }
+
+    pub fn complete_task(&mut self, prefix: &str, force: bool) -> Result<(), TaskListError> {
+        let full_id = self.get_full_id(prefix)?;
+
+        let children = self.get_children_tasks(&full_id)?;
+
+        let mut all_children_completed = true;
+        for child in &children {
+            if !child.is_completed() {
+                all_children_completed = false;
+                break;
+            }
+        }
+
+        if !all_children_completed {
+            let children_ids: Vec<String> =
+                children.into_iter().map(|c| c.id().to_string()).collect();
+            if !children_ids.is_empty() {
+                if force {
+                    for id in &children_ids {
+                        self.complete_task(id, force)?;
+                    }
+                } else {
+                    return Err(TaskListError::CompleteHasChildren);
+                }
+            }
+        }
+
+        let task = match self.get_task(prefix) {
+            Err(e) => {
+                return Err(e);
+            }
+            Ok(task) => task,
+        };
+
+        task.set_complete(true);
+        self.compute_prefixes();
+
+        println!("completed task {} ({})", prefix, full_id);
 
         Ok(())
     }
