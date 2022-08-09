@@ -66,7 +66,6 @@ impl TaskList {
                 // Create list of tags, e.g. [tag1] [tag2] [tag3]
                 let mut tags = "".to_string();
                 for tag in task.tags() {
-                    //tags += &format!("[{}] ", tag);
                     let _ = write!(tags, "[{}] ", tag);
                 }
 
