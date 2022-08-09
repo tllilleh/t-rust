@@ -1,6 +1,7 @@
 use super::task;
 use std::collections::HashMap;
 use std::fs::File;
+use std::fmt::Write as _;
 use std::io::{self, BufRead, BufWriter, Write};
 use std::path::Path;
 use thiserror::Error;
@@ -65,7 +66,8 @@ impl TaskList {
                 // Create list of tags, e.g. [tag1] [tag2] [tag3]
                 let mut tags = "".to_string();
                 for tag in task.tags() {
-                    tags += &format!("[{}] ", tag);
+                    //tags += &format!("[{}] ", tag);
+                    let _ = write!(tags, "[{}] ", tag);
                 }
 
                 let indent_item = {
