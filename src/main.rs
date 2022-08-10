@@ -102,7 +102,7 @@ fn get_args() -> clap::App<'static, 'static> {
                         .value_name("DESC")
                         .help("Task description")
                         .multiple(true)
-                        .required(true),
+                        .required(false),
                 ),
         )
         .subcommand(
@@ -258,7 +258,16 @@ fn edit_task(task_file: &str, matches: &ArgMatches) {
         Ok(task) => task,
     };
 
-    // Update description
+    // Update description; if none provided on command line open editor with current value as
+    // default.
+    if desc.is_empty() {
+        if let Ok(edited) = edit::edit(&task.desc()) {
+            desc = edited;
+        }
+    }
+    // Remove any newlines
+    desc = desc.replace('\n', "");
+
     task.set_desc(&desc);
 
     // Save Task List
