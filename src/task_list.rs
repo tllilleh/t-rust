@@ -23,7 +23,7 @@ pub enum TaskListError {
     #[error("The task you are trying to remove has children.  Use --force.")]
     RemoveHasChildren,
 
-    #[error("The task you are trying to complete has children.  Use --force.")]
+    #[error("The task you are trying to complete has uncompleted children.  Use --force.")]
     CompleteHasChildren,
 
     // Represents all other cases of `std::io::Error`.
@@ -49,12 +49,12 @@ where
 }
 
 impl TaskList {
-    pub fn show(&self) {
+    pub fn show(&self, hide_completed: bool) {
         println!("Tasks:");
-        self.show_tasks(None, "│");
+        self.show_tasks(None, "│", hide_completed);
     }
 
-    fn show_tasks(&self, parent_id: Option<&str>, indent: &str) {
+    fn show_tasks(&self, parent_id: Option<&str>, indent: &str, hide_completed: bool) {
         let mut sorted_tasks = Vec::new();
         for task in &self.tasks {
             if task.parent_id().as_deref() == parent_id {
@@ -92,7 +92,9 @@ impl TaskList {
                     }
                 };
 
-                println!("{} {} {}: {}{}", indent_item, checkmark, prefix, tags, task.desc());
+                if !hide_completed || !task.is_completed() || !self.all_descendants_completed(task.id()) {
+                    println!("{} {} {}: {}{}", indent_item, checkmark, prefix, tags, task.desc());
+                }
 
                 let next_indent = if last_task {
                     let mut a = indent.to_string();
@@ -102,7 +104,7 @@ impl TaskList {
                     indent.to_string() + "   │"
                 };
 
-                self.show_tasks(Some(task.id()), &next_indent);
+                self.show_tasks(Some(task.id()), &next_indent, hide_completed);
             }
         }
     }
@@ -233,15 +235,9 @@ impl TaskList {
 
         let children = self.get_children_tasks(&full_id)?;
 
-        let mut all_children_completed = true;
-        for child in &children {
-            if !child.is_completed() {
-                all_children_completed = false;
-                break;
-            }
-        }
+        let all_descendants_completed = self.all_descendants_completed(prefix);
 
-        if !all_children_completed {
+        if !all_descendants_completed {
             let children_ids: Vec<String> =
                 children.into_iter().map(|c| c.id().to_string()).collect();
             if !children_ids.is_empty() {
@@ -305,19 +301,41 @@ impl TaskList {
     }
 
     pub fn get_children_tasks(
-        &mut self,
+        &self,
         prefix: &str,
-    ) -> Result<Vec<&mut task::Task>, TaskListError> {
+    ) -> Result<Vec<&task::Task>, TaskListError> {
         let mut children = Vec::new();
         let full_id = self.get_full_id(prefix)?;
 
-        for task in &mut self.tasks {
+        for task in &self.tasks {
             if task.parent_id().eq(&Some(full_id.to_string())) {
                 children.push(task);
             }
         }
 
         Ok(children)
+    }
+
+    pub fn all_descendants_completed(&self, prefix: &str) -> bool {
+        let mut all_descendants_completed = true;
+
+        if let Ok(children) = self.get_children_tasks(prefix)
+        {
+            for child in children
+            {
+                if !child.is_completed() {
+                    all_descendants_completed = false;
+                    break;
+                }
+
+                if !self.all_descendants_completed(child.id()) {
+                    all_descendants_completed = false;
+                    break;
+                }
+            }
+        }
+
+        all_descendants_completed
     }
 }
 

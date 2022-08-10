@@ -140,6 +140,11 @@ fn get_args() -> clap::App<'static, 'static> {
                 .required_unless("completions")
                 .help("FILE to use for task list"),
         )
+        .arg(
+            Arg::with_name("hide-completed")
+                .long("hide-completed")
+                .help("Don't show completed tasks"),
+        )
 }
 
 fn main() {
@@ -176,17 +181,18 @@ fn main() {
         ("complete", Some(complete_matches)) => complete_task(task_file, complete_matches),
         ("uncomplete", Some(uncomplete_matches)) => uncomplete_task(task_file, uncomplete_matches),
         ("tag", Some(tag_matches)) => tag_task(task_file, tag_matches),
-        ("", None) => show_tasks(task_file),
+        ("", None) => show_tasks(task_file, &matches),
         _ => unreachable!(),
     }
 }
 
-fn show_tasks(task_file: &str) {
+fn show_tasks(task_file: &str, matches: &ArgMatches) {
     // Load Task List
     let tasks = task_list::create_from_file(task_file);
+    let hide_completed = matches.is_present("hide-completed");
 
     // Show Task List
-    tasks.show();
+    tasks.show(hide_completed);
 }
 
 fn add_task(task_file: &str, matches: &ArgMatches) {
