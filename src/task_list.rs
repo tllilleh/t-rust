@@ -1,4 +1,5 @@
 use super::task;
+use colored::Colorize;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::fs::File;
@@ -69,7 +70,7 @@ impl TaskList {
                 // Create list of tags, e.g. [tag1] [tag2] [tag3]
                 let mut tags = "".to_string();
                 for tag in task.tags() {
-                    let _ = write!(tags, "[{}] ", tag);
+                    let _ = write!(tags, "[{}] ", tag.red());
                 }
 
                 let indent_item = {
@@ -85,10 +86,10 @@ impl TaskList {
                 let checkmark = {
                     if task.is_completed() {
                         //"☒"
-                        "[X]"
+                        format!("[{}]", "X".bold())
                     } else {
                         //"☐"
-                        "[ ]"
+                        "[ ]".to_string()
                     }
                 };
 
@@ -96,7 +97,14 @@ impl TaskList {
                     || !task.is_completed()
                     || !self.all_descendants_completed(task.id())
                 {
-                    println!("{} {} {}: {}{}", indent_item, checkmark, prefix, tags, task.desc());
+                    println!(
+                        "{} {} {}: {}{}",
+                        indent_item,
+                        checkmark,
+                        prefix.yellow().bold(),
+                        tags,
+                        task.desc()
+                    );
                 }
 
                 let next_indent = if last_task {
