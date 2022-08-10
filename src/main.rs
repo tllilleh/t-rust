@@ -59,7 +59,7 @@ fn get_args() -> clap::App<'static, 'static> {
         .subcommand(
             SubCommand::with_name("complete")
                 .visible_alias("c")
-                .about("Complete a task")
+                .about("Complete a task.  That is, check it off.")
                 .arg(
                     Arg::with_name("id")
                         .value_name("ID")
@@ -76,13 +76,14 @@ fn get_args() -> clap::App<'static, 'static> {
         )
         .subcommand(
             SubCommand::with_name("uncomplete")
-                .visible_alias("u").about("Uncomplete a task")
+                .visible_alias("u")
+                .about("Uncomplete a task. That is, uncheck it.")
                 .arg(
                     Arg::with_name("id")
-                    .value_name("ID")
-                    .takes_value(true)
-                    .required(true)
-                    .help("Task ID to uncomplete"),
+                        .value_name("ID")
+                        .takes_value(true)
+                        .required(true)
+                        .help("Task ID to uncomplete"),
                 ),
         )
         .subcommand(

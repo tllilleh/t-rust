@@ -92,7 +92,10 @@ impl TaskList {
                     }
                 };
 
-                if !hide_completed || !task.is_completed() || !self.all_descendants_completed(task.id()) {
+                if !hide_completed
+                    || !task.is_completed()
+                    || !self.all_descendants_completed(task.id())
+                {
                     println!("{} {} {}: {}{}", indent_item, checkmark, prefix, tags, task.desc());
                 }
 
@@ -300,10 +303,7 @@ impl TaskList {
         Err(TaskListError::BadPrefix)
     }
 
-    pub fn get_children_tasks(
-        &self,
-        prefix: &str,
-    ) -> Result<Vec<&task::Task>, TaskListError> {
+    pub fn get_children_tasks(&self, prefix: &str) -> Result<Vec<&task::Task>, TaskListError> {
         let mut children = Vec::new();
         let full_id = self.get_full_id(prefix)?;
 
@@ -319,10 +319,8 @@ impl TaskList {
     pub fn all_descendants_completed(&self, prefix: &str) -> bool {
         let mut all_descendants_completed = true;
 
-        if let Ok(children) = self.get_children_tasks(prefix)
-        {
-            for child in children
-            {
+        if let Ok(children) = self.get_children_tasks(prefix) {
+            for child in children {
                 if !child.is_completed() {
                     all_descendants_completed = false;
                     break;
